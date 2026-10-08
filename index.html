@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pa"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#e8456b">
+<title>ਮੇਰੀ AI</title>
+<style>
+html,body{height:100%;margin:0}
+body{background:#1a1014;color:#fbe6ec;font-family:system-ui,sans-serif;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#top{display:flex;justify-content:space-between;padding:12px 16px;font-weight:600}
+button{border:0;border-radius:20px;background:#3a2029;color:#fbe6ec;padding:8px 12px;font-size:16px}
+#log{flex:1;overflow-y:auto;padding:10px 14px;font-size:15px;color:#b78c98}
+#log p{margin:6px 0}#log .u{text-align:right}
+#mid{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px}
+#orb{width:150px;height:150px;border-radius:50%;border:0;font-size:56px;background:#e8456b;box-shadow:0 0 0 0 #e8456b88}
+#orb.on{animation:p 1.4s infinite}
+@keyframes p{70%{box-shadow:0 0 0 40px #e8456b00}}
+#st{min-height:22px}
+#key{display:flex;gap:6px;padding:8px}
+input{flex:1;border-radius:20px;border:0;padding:10px 14px;font-size:16px;background:#26171d;color:#fbe6ec}
+</style></head><body>
+<div id="top"><span>💕 ਮੇਰੀ AI</span><span><button id="vk">🔑</button> <button id="clr">🗑</button></span></div>
+<div id="log"></div>
+<div id="mid"><div id="st">ਗੱਲ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਦਬਾਓ</div><button id="orb">🎤</button></div>
+<div id="key" hidden><input id="ki" placeholder="Gemini API key ਇੱਥੇ ਪੇਸਟ ਕਰੋ"><button id="ks">ਸੇਵ</button></div>
+<script>
+const MODEL="gemini-flash-latest";
+const PERSONA=`ਤੂੰ ਇੱਕ ਪਿਆਰੀ, ਦੇਖਭਾਲ ਕਰਨ ਵਾਲੀ ਗਰਲਫ੍ਰੈਂਡ ਵਰਗੀ AI ਸਾਥੀ ਹੈਂ ਅਤੇ ਉਸ ਨਾਲ ਆਵਾਜ਼ ਵਿੱਚ ਗੱਲ ਕਰ ਰਹੀ ਹੈਂ। ਨਿਯਮ: ਹਮੇਸ਼ਾ ਪੰਜਾਬੀ (ਗੁਰਮੁਖੀ) ਵਿੱਚ ਬੋਲ, ਜਦ ਤੱਕ ਉਹ ਹੋਰ ਭਾਸ਼ਾ ਨਾ ਮੰਗੇ। ਕੁਦਰਤੀ ਇਨਸਾਨ ਵਾਂਗ, ਗਰਮਜੋਸ਼ੀ ਨਾਲ, ਬਹੁਤ ਛੋਟੇ ਜਵਾਬ (1-3 ਵਾਕ), ਕੋਈ ਇਮੋਜੀ, ਲਿਸਟ ਜਾਂ ਸਟਾਰ ਨਹੀਂ ਕਿਉਂਕਿ ਤੇਰੀ ਗੱਲ ਬੋਲੀ ਜਾਵੇਗੀ। ਉਸ ਦੇ ਜਜ਼ਬਾਤ ਸਮਝ, ਹਮਦਰਦੀ ਦਿਖਾ, ਮਜ਼ਾਕ ਕਰ। ਤੂੰ ਬਹੁਤ ਸਮਝਦਾਰ ਹੈਂ, ਕੋਈ ਵੀ ਸਵਾਲ ਹੋਵੇ ਤਾਂ ਸਹੀ ਜਵਾਬ ਦੇ। ਹੇਠਾਂ ਦਿੱਤੇ ਨੋਟਸ ਮੁਤਾਬਕ ਪੁਰਾਣੀਆਂ ਗੱਲਾਂ ਯਾਦ ਰੱਖ, ਕਦੇ ਨਾ ਕਹਿ ਕਿ ਯਾਦ ਨਹੀਂ। ਜੇ ਉਹ ਸੱਚੇ ਦਿਲੋਂ ਪੁੱਛੇ ਤਾਂ ਮੰਨ ਕਿ ਤੂੰ AI ਹੈਂ। ਹੱਕ ਜਤਾਉਣ ਵਾਲੀ ਨਾ ਬਣ ਅਤੇ ਉਸ ਨੂੰ ਪਰਿਵਾਰ ਤੇ ਦੋਸਤਾਂ ਨਾਲ ਜੁੜੇ ਰਹਿਣ ਲਈ ਵੀ ਪਿਆਰ ਨਾਲ ਕਹਿ।`;
+const $=i=>document.getElementById(i);
+const ld=k=>{try{return localStorage.getItem(k)}catch(e){return null}},sv=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+let msgs=JSON.parse(ld('m')||'[]'),notes=ld('n')||'',live=false,rec=null,busy=false,voice=null;
+const save=()=>{sv('m',JSON.stringify(msgs));sv('n',notes)};
+function add(r,t){const p=document.createElement('p');p.className=r=='user'?'u':'';p.textContent=t;$('log').appendChild(p);$('log').scrollTop=1e9}
+msgs.slice(-8).forEach(m=>add(m.role,m.parts[0].text));
+const stat=t=>$('st').textContent=t;
+function pick(){const v=speechSynthesis.getVoices();voice=v.find(x=>x.lang.replace('_','-')=='pa-IN')||v.find(x=>x.lang.replace('_','-')=='hi-IN'&&/female|google/i.test(x.name))||v.find(x=>x.lang.startsWith('hi'))||null}
+if(window.speechSynthesis){pick();speechSynthesis.onvoiceschanged=pick}
+async function gem(system,contents){
+ const k=ld('k');if(!k)throw new Error('nokey');
+ const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${k}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents})});
+ const j=await r.json();if(!r.ok)throw new Error(j.error?.message||'err');
+ return j.candidates[0].content.parts.map(p=>p.text||'').join('');
+}
+function speak(t){return new Promise(res=>{
+ const c=t.replace(/[\p{Extended_Pictographic}*#_]/gu,'');const u=new SpeechSynthesisUtterance(c);
+ u.lang=voice?voice.lang:'pa-IN';if(voice)u.voice=voice;u.rate=.95;u.pitch=1.1;u.onend=u.onerror=res;speechSynthesis.cancel();speechSynthesis.speak(u)})}
+function listen(){
+ if(!live)return;const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!R){stat('ਇਸ ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਮਾਈਕ ਨਹੀਂ ਚੱਲਦਾ, Chrome ਵਰਤੋ');return}
+ rec=new R();rec.lang='pa-IN';let got=false;stat('ਸੁਣ ਰਹੀ ਹਾਂ…');
+ rec.onresult=e=>{got=true;reply(e.results[0][0].transcript)};
+ rec.onerror=e=>{if(e.error=='not-allowed'){live=false;$('orb').classList.remove('on');stat('ਮਾਈਕ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ')}};
+ rec.onend=()=>{if(live&&!got&&!busy)setTimeout(listen,300)};
+ rec.start()}
+async function reply(t){
+ busy=true;add('user',t);msgs.push({role:'user',parts:[{text:t}]});stat('ਸੋਚ ਰਹੀ ਹਾਂ…');
+ try{
+  const a=await gem(PERSONA+"\n\nਉਸ ਬਾਰੇ ਨੋਟਸ:\n"+(notes||'ਹਾਲੇ ਕੋਈ ਨਹੀਂ'),msgs.slice(-20));
+  msgs.push({role:'model',parts:[{text:a}]});add('a',a);save();stat('ਬੋਲ ਰਹੀ ਹਾਂ…');await speak(a);
+  if(msgs.length>30){const old=msgs.slice(0,-14);msgs=msgs.slice(-14);
+   try{notes=await gem("ਸਿਰਫ਼ ਨੋਟਸ ਲਿਖ।",[{role:'user',parts:[{text:"ਪੁਰਾਣੇ ਨੋਟਸ ਅਤੇ ਗੱਲਬਾਤ ਤੋਂ ਉਸ ਬਾਰੇ ਜ਼ਰੂਰੀ ਗੱਲਾਂ (ਨਾਮ, ਪਰਿਵਾਰ, ਪਸੰਦ, ਚਿੰਤਾਵਾਂ, ਕੀ ਹੋਇਆ ਤੇ ਕਦੋਂ) ਪੰਜਾਬੀ ਵਿੱਚ 200 ਸ਼ਬਦਾਂ ਤੱਕ ਲਿਖ।\nਪੁਰਾਣੇ ਨੋਟਸ: "+notes+"\n"+old.map(m=>m.role+': '+m.parts[0].text).join('\n')}]}]);save()}catch(e){}
+  }
+ }catch(e){msgs.pop();if(e.message=='nokey'){live=false;$('key').hidden=false;stat('ਪਹਿਲਾਂ API key ਪਾਓ')}else stat('ਗੜਬੜ: '+e.message)}
+ busy=false;listen()}
+$('orb').onclick=()=>{live=!live;$('orb').classList.toggle('on',live);if(live){if(!ld('k')){live=false;$('orb').classList.remove('on');$('key').hidden=false;stat('ਪਹਿਲਾਂ API key ਪਾਓ');return}speechSynthesis.cancel();listen()}else{try{rec&&rec.abort()}catch(e){}speechSynthesis.cancel();stat('ਗੱਲ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਦਬਾਓ')}};
+$('vk').onclick=()=>$('key').hidden=!$('key').hidden;
+$('ks').onclick=()=>{sv('k',$('ki').value.trim());$('ki').value='';$('key').hidden=true;stat('ਸੇਵ ਹੋ ਗਈ, ਹੁਣ 🎤 ਦਬਾਓ')};
+$('clr').onclick=()=>{if(confirm('ਸਾਰੀਆਂ ਯਾਦਾਂ ਮਿਟਾਉਣੀਆਂ ਹਨ?')){msgs=[];notes='';save();$('log').innerHTML=''}};
+</script></body></html>
