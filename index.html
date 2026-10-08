@@ -40,7 +40,7 @@ async function gem(system,contents){
  const j=await r.json();if(!r.ok)throw new Error(j.error?.message||'err');
  return j.candidates[0].content.parts.map(p=>p.text||'').join('');
 }
-function speak(t){return new Promise(res=>{
+function speakLocal(t){return new Promise(res=>{
  const c=t.replace(/[\p{Extended_Pictographic}*#_]/gu,'');const u=new SpeechSynthesisUtterance(c);
  u.lang=voice?voice.lang:'pa-IN';if(voice)u.voice=voice;u.rate=.95;u.pitch=1.1;u.onend=u.onerror=res;speechSynthesis.cancel();speechSynthesis.speak(u)})}
 function listen(){
@@ -51,6 +51,18 @@ function listen(){
  rec.onerror=e=>{if(e.error=='not-allowed'){live=false;$('orb').classList.remove('on');stat('ਮਾਈਕ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ')}};
  rec.onend=()=>{if(live&&!got&&!busy)setTimeout(listen,300)};
  rec.start()}
+async function speak(t){
+ const c=t.replace(/[\p{Extended_Pictographic}*#_]/gu,'');
+ try{
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${ld('k')}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:'ਪਿਆਰ ਨਾਲ, ਕੁਦਰਤੀ ਅਤੇ ਹੌਲੀ ਆਵਾਜ਼ ਵਿੱਚ ਬੋਲ: '+c}]}],generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:'Aoede'}}}}})});
+  const j=await r.json();const d=j.candidates[0].content.parts[0].inlineData.data;
+  const b=atob(d),n=b.length>>1,f=new Float32Array(n);
+  for(let i=0;i<n;i++){let v=b.charCodeAt(2*i)|(b.charCodeAt(2*i+1)<<8);if(v>32767)v-=65536;f[i]=v/32768}
+  const A=window.AC||(window.AC=new (window.AudioContext||window.webkitAudioContext)());await A.resume();
+  const buf=A.createBuffer(1,n,24000);buf.copyToChannel(f,0);
+  return new Promise(res=>{const s=A.createBufferSource();s.buffer=buf;s.connect(A.destination);s.onended=res;s.start()});
+ }catch(e){return speakLocal(t)}
+}
 async function reply(t){
  busy=true;add('user',t);msgs.push({role:'user',parts:[{text:t}]});stat('ਸੋਚ ਰਹੀ ਹਾਂ…');
  try{
@@ -61,7 +73,7 @@ async function reply(t){
   }
  }catch(e){msgs.pop();if(e.message=='nokey'){live=false;$('key').hidden=false;stat('ਪਹਿਲਾਂ API key ਪਾਓ')}else stat('ਗੜਬੜ: '+e.message)}
  busy=false;listen()}
-$('orb').onclick=()=>{live=!live;$('orb').classList.toggle('on',live);if(live){if(!ld('k')){live=false;$('orb').classList.remove('on');$('key').hidden=false;stat('ਪਹਿਲਾਂ API key ਪਾਓ');return}speechSynthesis.cancel();listen()}else{try{rec&&rec.abort()}catch(e){}speechSynthesis.cancel();stat('ਗੱਲ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਦਬਾਓ')}};
+$('orb').onclick=()=>{live=!live;$('orb').classList.toggle('on',live);if(live){try{window.AC=window.AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume()}catch(e){}if(!ld('k')){live=false;$('orb').classList.remove('on');$('key').hidden=false;stat('ਪਹਿਲਾਂ API key ਪਾਓ');return}speechSynthesis.cancel();listen()}else{try{rec&&rec.abort()}catch(e){}speechSynthesis.cancel();stat('ਗੱਲ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਦਬਾਓ')}};
 $('vk').onclick=()=>$('key').hidden=!$('key').hidden;
 $('ks').onclick=()=>{sv('k',$('ki').value.trim());$('ki').value='';$('key').hidden=true;stat('ਸੇਵ ਹੋ ਗਈ, ਹੁਣ 🎤 ਦਬਾਓ')};
 $('clr').onclick=()=>{if(confirm('ਸਾਰੀਆਂ ਯਾਦਾਂ ਮਿਟਾਉਣੀਆਂ ਹਨ?')){msgs=[];notes='';save();$('log').innerHTML=''}};
